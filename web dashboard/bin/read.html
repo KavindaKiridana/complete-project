@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read Data</title>
+</head>
+
+<body>
+    <form id="readForm">
+        <input type="submit" value="Read Data">
+    </form>
+    <p id="output"></p>
+
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        // Firebase configuration
+        let firebaseConfig;
+        try {
+            const configModule = await import('../config.js');
+            firebaseConfig = configModule.firebaseConfig;
+            if (!firebaseConfig || !firebaseConfig.apiKey) {
+                throw new Error("Firebase configuration is invalid or missing apiKey.");
+            }
+        } catch (error) {
+            console.error("Failed to import Firebase configuration:", error);
+        }
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Add event listener to the form for fetching data
+        document.getElementById("readForm").addEventListener("submit", function (e) {
+            e.preventDefault(); // Prevent default form submission
+
+            const outputElement = document.getElementById("output");
+            outputElement.innerText = "Loading..."; // Show loading message
+
+            // Reference the 'weatherParameters' node
+            const dbRef = ref(db);
+            get(child(dbRef, "weatherParameters"))
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        // Display the fetched data in a formatted way
+                        outputElement.innerText = `
+                            Temperature: ${data.temp}°C
+                            Humidity: ${data.humidity}%
+                            Light: ${data.light} lux
+                            Soil Moisture: ${data.moisture}%
+                            Tap Status: ${data.tap}
+                            Time: ${data.time}
+                        `;
+                    } else {
+                        outputElement.innerText = "No data found!";
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error reading data:", error);
+                    outputElement.innerText = `Error: ${error.message}`;
+                });
+        });
+    </script>
+
+</body>
+
+</html>

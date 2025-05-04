@@ -1,0 +1,524 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Greenhouse Documentation</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-white">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Smart Greenhouse</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-primary text-white" href="index.html">Dashboard</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container my-5">
+        <h1 class="mb-4">Smart Greenhouse Guide for Vanilla Farming</h1>
+
+        <section id="introduction" class="mb-5">
+            <h2>Introduction</h2>
+            <p>This guide walks you through setting up a smart greenhouse monitoring system specifically designed for vanilla farming. The system consists of three main components:</p>
+            <ol>
+                <li><strong>IoT Environment Monitoring</strong> - Sensors that collect real-time data on temperature, humidity, soil moisture, and light levels</li>
+                <li><strong>Web-based User Interface</strong> - Dashboard for monitoring environmental conditions and system status</li>
+                <li><strong>ML Analysis</strong> - Machine learning tools to predict vanilla vine growth based on environmental factors</li>
+            </ol>
+            <p>By following this guide, you'll be able to build a complete system that helps optimize your vanilla farming with data-driven insights.</p>
+        </section>
+
+        <section id="prerequisites" class="mb-5">
+            <h2>Prerequisites</h2>
+            <p>Before you begin, you'll need:</p>
+            <ul>
+                <li>Basic knowledge of Arduino programming</li>
+                <li>Familiarity with web development concepts</li>
+                <li>ESP32 microcontroller</li>
+                <li>Various sensors (DHT11, soil moisture sensor, LDR)</li>
+                <li>Relay module and solenoid valve for watering system</li>
+                <li>Computer with internet access</li>
+                <li>Firebase account (free)</li>
+                <li>WiFi network with stable internet connection</li>
+            </ul>
+        </section>
+
+        <section id="downloading-code" class="mb-5">
+            <h2>1. Downloading the Code Base</h2>
+            <p>First, download the three main components of the project from GitHub:</p>
+            <h3>IoT Part</h3>
+            <p><a href="https://github.com/KavindaKiridana/IoT-part">https://github.com/KavindaKiridana/IoT-part</a></p>
+            <h3>ML Part</h3>
+            <p><a href="https://github.com/KavindaKiridana/ML-part">https://github.com/KavindaKiridana/ML-part</a></p>
+            <h3>Web Part</h3>
+            <p><a href="https://github.com/KavindaKiridana/webPart">https://github.com/KavindaKiridana/webPart</a></p>
+            <p>If any of these repositories are private, please request access by contacting: <a href="mailto:kavindakiridena@gmail.com">kavindakiridena@gmail.com</a></p>
+            <p>Clone the repositories to your local machine using Git:</p>
+            <pre class="bg-secondary text-white p-3 rounded">
+git clone https://github.com/KavindaKiridana/IoT-part.git
+git clone https://github.com/KavindaKiridana/ML-part.git
+git clone https://github.com/KavindaKiridana/webPart.git
+            </pre>
+            <p>Alternatively, you can download the code as ZIP files from the GitHub website by clicking the "Code" button and selecting "Download ZIP".</p>
+        </section>
+
+        <section id="firebase-setup" class="mb-5">
+            <h2>2. Setting Up Firebase</h2>
+            <p>Firebase is used to store sensor data and provide real-time updates to the web interface. Follow these steps to set up your Firebase project:</p>
+            <ol>
+                <li><strong>Create a Firebase Account</strong>
+                    <ul>
+                        <li>Go to <a href="https://firebase.google.com/">firebase.google.com</a> and sign in with your Google account</li>
+                        <li>Click "Go to console" in the top right</li>
+                    </ul>
+                </li>
+                <li><strong>Create a New Project</strong>
+                    <ul>
+                        <li>Click "Add project"</li>
+                        <li>Enter a project name (e.g., "Vanilla-Greenhouse")</li>
+                        <li>Follow the prompts to complete project creation</li>
+                    </ul>
+                </li>
+                <li><strong>Set Up Realtime Database</strong>
+                    <ul>
+                        <li>In the Firebase console, go to "Build" → "Realtime Database"</li>
+                        <li>Click "Create Database"</li>
+                        <li>Start in test mode (for easier setup)</li>
+                        <li>Choose a database location closest to your physical location</li>
+                    </ul>
+                </li>
+                <li><strong>Get API Keys for Your Project</strong>
+                    <ul>
+                        <li>Go to Project Settings (gear icon near "Project Overview")</li>
+                        <li>Under the "General" tab, scroll down to "Your apps"</li>
+                        <li>Click the web icon (&lt;/&gt;) to add a web app</li>
+                        <li>Register your app with a nickname (e.g., "vanilla-greenhouse-web")</li>
+                        <li>Copy the provided Firebase configuration object - you'll need this for both IoT and web parts</li>
+                    </ul>
+                </li>
+            </ol>
+            <p>Your configuration will look similar to this:</p>
+            <pre class="bg-secondary text-white p-3 rounded">
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-project-id.firebaseapp.com",
+  databaseURL: "https://your-project-id-default-rtdb.region.firebasedatabase.app",
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+            </pre>
+            <ol start="5">
+                <li><strong>Set Up Authentication</strong>
+                    <ul>
+                        <li>Go to "Build" → "Authentication"</li>
+                        <li>Click "Get started"</li>
+                        <li>Enable "Email/Password" provider</li>
+                        <li>Add a new user with your email and a password</li>
+                        <li>Make note of the email and password for use in the ESP32 code</li>
+                    </ul>
+                </li>
+            </ol>
+            <p>For more detailed instructions on ESP8266/ESP32 and Firebase integration, visit: <a href="https://randomnerdtutorials.com/esp8266-nodemcu-firebase-realtime-database/">https://randomnerdtutorials.com/esp8266-nodemcu-firebase-realtime-database/</a></p>
+        </section>
+
+        <section id="wifi-credentials" class="mb-5">
+            <h2>3. Preparing WiFi Credentials</h2>
+            <p>You'll need your WiFi network's SSID (name) and password to connect the ESP32 to the internet. Make sure you:</p>
+            <ul>
+                <li>Have a stable WiFi connection in your greenhouse area</li>
+                <li>Know the exact SSID name (case-sensitive)</li>
+                <li>Know the correct WiFi password</li>
+                <li>Use a 2.4GHz network (ESP32 doesn't support 5GHz)</li>
+            </ul>
+            <p>Write down these details for later use in the IoT setup.</p>
+        </section>
+
+        <section id="iot-system" class="mb-5">
+            <h2>4. Setting Up the IoT System</h2>
+            <h3>4.1 Hardware Assembly</h3>
+            <p>Connect the components to your ESP32 according to this pin mapping:</p>
+            <table class="table table-dark table-bordered">
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Pin on Module</th>
+                        <th>Connect to ESP32 GPIO</th>
+                        <th>Power</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>DHT11</td>
+                        <td>Data</td>
+                        <td>GPIO4 (Digital)</td>
+                        <td>3.3V</td>
+                        <td>Temperature & humidity sensor</td>
+                    </tr>
+                    <tr>
+                        <td>Soil Sensor</td>
+                        <td>A0 (Analog)</td>
+                        <td>GPIO34 (Analog only)</td>
+                        <td>3.3V or 5V</td>
+                        <td>Soil moisture measurement</td>
+                    </tr>
+                    <tr>
+                        <td>LDR Module</td>
+                        <td>A0 (Analog)</td>
+                        <td>GPIO35 (Analog only)</td>
+                        <td>3.3V or 5V</td>
+                        <td>Light level detection</td>
+                    </tr>
+                    <tr>
+                        <td>Relay Module</td>
+                        <td>IN (Control Pin)</td>
+                        <td>GPIO5 (Digital)</td>
+                        <td>5V</td>
+                        <td>Controls water valve</td>
+                    </tr>
+                    <tr>
+                        <td>Relay Module</td>
+                        <td>VCC</td>
+                        <td>5V</td>
+                        <td></td>
+                        <td>Power for relay</td>
+                    </tr>
+                    <tr>
+                        <td>Relay Module</td>
+                        <td>GND</td>
+                        <td>GND (shared with ESP32)</td>
+                        <td></td>
+                        <td>Common ground</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Power Requirements:</strong></p>
+            <ul>
+                <li>9V 1-2A power supply for the solenoid valve (connected via relay module)</li>
+                <li>12V 0.5A power supply for the ESP32</li>
+            </ul>
+            <p>Make sure all connections are secure and properly insulated.</p>
+
+            <h3>4.2 Software Setup</h3>
+            <ol>
+                <li><strong>Install Arduino IDE</strong>
+                    <ul>
+                        <li>Download and install from <a href="https://www.arduino.cc/en/software">arduino.cc</a></li>
+                        <li>Open Arduino IDE</li>
+                    </ul>
+                </li>
+                <li><strong>Install ESP32 Board Support</strong>
+                    <ul>
+                        <li>Go to File → Preferences</li>
+                        <li>Add <code>https://dl.espressif.com/dl/package_esp32_index.json</code> to "Additional Boards Manager URLs"</li>
+                        <li>Go to Tools → Board → Boards Manager</li>
+                        <li>Search for "ESP32" and install the ESP32 package</li>
+                    </ul>
+                </li>
+                <li><strong>Install Required Libraries</strong>
+                    <ul>
+                        <li>Go to Sketch → Include Library → Manage Libraries</li>
+                        <li>Search for and install:
+                            <ul>
+                                <li>Firebase ESP Client by mobizt</li>
+                                <li>DHT sensor library by Adafruit</li>
+                                <li>NTPClient by Fabrice Weinberg</li>
+                                <li>Time by Michael Margolis</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li><strong>Configure the IoT Code</strong>
+                    <ul>
+                        <li>Open the IoT-part project in Arduino IDE</li>
+                        <li>Update the Firebase credentials in the code:</li>
+                    </ul>
+                    <pre class="bg-secondary text-white p-3 rounded">
+#define API_KEY "YOUR_API_KEY_FROM_FIREBASE"
+#define DATABASE_URL "YOUR_DATABASE_URL_FROM_FIREBASE"
+#define USER_EMAIL "YOUR_FIREBASE_AUTH_EMAIL"
+#define USER_PASSWORD "YOUR_FIREBASE_AUTH_PASSWORD"
+                    </pre>
+                    <ul>
+                        <li>Update the WiFi credentials:</li>
+                    </ul>
+                    <pre class="bg-secondary text-white p-3 rounded">
+#define WIFI_SSID "YOUR_WIFI_NAME"
+#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+                    </pre>
+                </li>
+                <li><strong>Upload the Code</strong>
+                    <ul>
+                        <li>Connect your ESP32 to your computer via USB</li>
+                        <li>Select the correct board (Tools → Board → ESP32 Dev Module)</li>
+                        <li>Select the correct port (Tools → Port → COM# or /dev/tty#)</li>
+                        <li>Click the Upload button (arrow icon)</li>
+                    </ul>
+                </li>
+                <li><strong>Monitor and Troubleshoot</strong>
+                    <ul>
+                        <li>Open Serial Monitor (Tools → Serial Monitor)</li>
+                        <li>Set baud rate to 115200</li>
+                        <li>Watch for the following messages:
+                            <ul>
+                                <li>"✅ Successfully connected to WiFi!" - Confirms WiFi connection</li>
+                                <li>"Time synchronized" - Confirms NTP time synchronization</li>
+                                <li>"✅ Data sent to Firebase!" - Confirms data is being sent to Firebase</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h3>4.3 Common Errors and Solutions</h3>
+            <table class="table table-dark table-bordered">
+                <thead>
+                    <tr>
+                        <th>Error</th>
+                        <th>Possible Solution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>WiFi connection fails</td>
+                        <td>Double-check SSID and password, ensure signal strength is good</td>
+                    </tr>
+                    <tr>
+                        <td>Firebase connection fails</td>
+                        <td>Verify API key and database URL, check internet connection</td>
+                    </tr>
+                    <tr>
+                        <td>"Auth token error"</td>
+                        <td>Verify email and password in Firebase Authentication</td>
+                    </tr>
+                    <tr>
+                        <td>Sensor readings showing 0 or strange values</td>
+                        <td>Check sensor connections, power, and try restarting ESP32</td>
+                    </tr>
+                    <tr>
+                        <td>Serial Monitor shows nothing</td>
+                        <td>Check baud rate (115200), USB connection, and board selection</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="web-interface" class="mb-5">
+            <h2>5. Setting Up the Web Interface</h2>
+            <p>The web interface provides a dashboard to monitor the environmental conditions and system status.</p>
+            <h3>5.1 Configuring Firebase Connection</h3>
+            <ol>
+                <li>Navigate to the webPart directory you downloaded</li>
+                <li>Open <code>config.js</code> in a text editor</li>
+                <li>Replace the Firebase configuration with your own:</li>
+            </ol>
+            <pre class="bg-secondary text-white p-3 rounded">
+// config.js
+export const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "YOUR_DATABASE_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+            </pre>
+
+            <h3>5.2 Running the Web Interface Locally</h3>
+            <p><strong>Method 1: Using a simple HTTP server</strong></p>
+            <ol>
+                <li>Install Node.js from <a href="https://nodejs.org/">nodejs.org</a></li>
+                <li>Open a terminal/command prompt in the webPart directory</li>
+                <li>Install http-server globally:</li>
+                <pre class="bg-secondary text-white p-3 rounded">
+npm install -g http-server
+                </pre>
+                <li>Run the server:</li>
+                <pre class="bg-secondary text-white p-3 rounded">
+http-server
+                </pre>
+                <li>Open your browser and navigate to <code>http://localhost:8080</code></li>
+            </ol>
+            <p><strong>Method 2: Using Visual Studio Code with Live Server extension</strong></p>
+            <ol>
+                <li>Install Visual Studio Code from <a href="https://code.visualstudio.com/">code.visualstudio.com</a></li>
+                <li>Open the webPart folder in VS Code</li>
+                <li>Install the "Live Server" extension</li>
+                <li>Right-click on index.html and select "Open with Live Server"</li>
+            </ol>
+
+            <h3>5.3 Troubleshooting the Web Interface</h3>
+            <p>If the dashboard is not displaying data:</p>
+            <ol>
+                <li>Open your browser's developer console (F12 or right-click → Inspect → Console)</li>
+                <li>Look for error messages related to Firebase</li>
+                <li>Common issues include:
+                    <ul>
+                        <li>Incorrect Firebase configuration</li>
+                        <li>Missing or malformed data in the database</li>
+                        <li>CORS issues (may require a browser extension or proper server setup)</li>
+                    </ul>
+                </li>
+            </ol>
+            <p>Your dashboard should display:</p>
+            <ul>
+                <li>Temperature readings</li>
+                <li>Humidity levels</li>
+                <li>Soil moisture data</li>
+                <li>Light level measurements</li>
+                <li>Water tap status (on/off)</li>
+                <li>Recent alerts (if any)</li>
+            </ul>
+        </section>
+
+        <section id="ml-analysis" class="mb-5">
+            <h2>6. Using the ML Analysis Tool</h2>
+            <p>The ML part of this project is already hosted online, so you don't need to set it up locally unless you want to modify it.</p>
+            <h3>6.1 Accessing the Analysis Tool</h3>
+            <ol>
+                <li>From your web dashboard, click the "View Analysis" button in the top right corner</li>
+                <li>Alternatively, visit <a href="https://vanilla-prediction.streamlit.app/">https://vanilla-prediction.streamlit.app/</a> directly</li>
+            </ol>
+            <h3>6.2 Using the Growth Prediction Tool</h3>
+            <p>The ML tool allows you to:</p>
+            <ol>
+                <li>Enter current measurements of your vanilla vines</li>
+                <li>Set environmental parameters (temperature, humidity, light levels)</li>
+                <li>Choose a future time point for prediction</li>
+                <li>Generate growth projections for vine length and leaf count</li>
+                <li>View growth insights and recommendations</li>
+            </ol>
+            <h3>6.3 Interpreting the Results</h3>
+            <p>The analysis provides:</p>
+            <ul>
+                <li>Predicted vine length and leaf count</li>
+                <li>Growth comparison between current and future states</li>
+                <li>Weekly growth rates</li>
+                <li>Practical recommendations based on predictions</li>
+            </ul>
+        </section>
+
+        <section id="maintenance" class="mb-5">
+            <h2>Maintenance and Troubleshooting</h2>
+            <h3>Regular Maintenance</h3>
+            <p><strong>Physical System</strong></p>
+            <ul>
+                <li>Check sensor connections weekly</li>
+                <li>Ensure the water valve operates correctly</li>
+                <li>Clean dust from sensors monthly</li>
+            </ul>
+            <p><strong>Software System</strong></p>
+            <ul>
+                <li>Monitor ESP32 Serial output periodically</li>
+                <li>Check Firebase database usage (free tier has limits)</li>
+                <li>Update firmware if new versions are released</li>
+            </ul>
+            <h3>Common Issues</h3>
+            <table class="table table-dark table-bordered">
+                <thead>
+                    <tr>
+                        <th>Issue</th>
+                        <th>Solution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>System stops sending data</td>
+                        <td>Restart ESP32, check power and internet connection</td>
+                    </tr>
+                    <tr>
+                        <td>Water valve not activating</td>
+                        <td>Check relay connections and power supply</td>
+                    </tr>
+                    <tr>
+                        <td>Inaccurate sensor readings</td>
+                        <td>Calibrate sensors, check for damage or dirt</td>
+                    </tr>
+                    <tr>
+                        <td>Web dashboard not updating</td>
+                        <td>Check Firebase connection, refresh browser cache</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="resources" class="mb-5">
+            <h2>Additional Resources</h2>
+            <ul>
+                <li>ESP32 Documentation: <a href="https://www.esp32.com/">esp32.com</a></li>
+                <li>Firebase Documentation: <a href="https://firebase.google.com/docs">firebase.google.com/docs</a></li>
+                <li>Streamlit Documentation: <a href="https://docs.streamlit.io/">docs.streamlit.io</a></li>
+            </ul>
+        </section>
+
+        <section id="contact" class="mb-5">
+            <h2>Contact</h2>
+            <p>For further assistance or to report bugs, please contact:</p>
+            <ul>
+                <li>Email: <a href="mailto:kavindakiridena@gmail.com">kavindakiridena@gmail.com</a></li>
+            </ul>
+        </section>
+
+        <hr>
+        <p class="text-center">Happy farming! This smart greenhouse system will help you optimize growing conditions for your vanilla vines and make data-driven decisions to improve your harvest.</p>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+</body>
+</html>

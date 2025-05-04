@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <form id="userForm">
+        <input type="text" id="temp" placeholder="temperature" required><br>
+        <input type="text" id="humidity" placeholder="humidity" required><br>
+        <input type="text" id="light" placeholder="light" required><br>
+        <input type="text" id="moisture" placeholder="moisture" required><br>
+        <input type="hidden" id="time" value="2021-10-10 10:10:10" required><br>
+        <select name="tap" id="tap">
+            <option value="true">On</option>
+            <option value="false">Off</option>
+        </select>
+        <input type="submit" value="Submit" id="submit">
+    </form>
+    <script type="module">
+        // Import the functions you need from the SDKs 
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        // Firebase configuration
+        let firebaseConfig;
+        try {
+            const configModule = await import('../config.js');
+            firebaseConfig = configModule.firebaseConfig;
+            if (!firebaseConfig || !firebaseConfig.apiKey) {
+                throw new Error("Firebase configuration is invalid or missing apiKey.");
+            }
+        } catch (error) {
+            console.error("Failed to import Firebase configuration:", error);
+        }
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Get a reference to the database service
+        const db = getDatabase(app);
+
+        // Get the form element
+        const userForm = document.getElementById("userForm");
+
+        // Add an event listener for the form submission
+        userForm.addEventListener('submit', function (e) {
+            e.preventDefault(); // Prevent form from reloading the page
+
+            // Get the input values and convert to proper types
+            const temp = parseFloat(document.getElementById("temp").value);
+            const humidity = parseFloat(document.getElementById("humidity").value);
+            const light = parseInt(document.getElementById("light").value);
+            const moisture = parseFloat(document.getElementById("moisture").value);
+            const time = document.getElementById("time").value;
+            const tap = document.getElementById("tap").value;
+
+            // Write data to Firebase Realtime Database
+            set(ref(db, 'weatherParameters/'), {
+                temp: temp,  // Now a float
+                humidity: humidity, // Now a float
+                light: light, // Now an integer
+                moisture: moisture, // Now a float
+                time: time,
+                tap: tap // Now a boolean
+            }).then(() => {
+                // Alert after data is successfully written
+                alert("Data saved successfully!");
+                // Optional: Reset the form
+                userForm.reset();
+            }).catch((error) => {
+                // Log errors to the console and alert the user
+                console.error("Error writing data: ", error);
+                alert("Error saving data: " + error.message);
+            });
+        });
+    </script>
+
+    <script>
+        // Function to update the time field with Sri Lanka time
+        function updateTimeField() {
+            const now = new Date();
+
+            // Format date in local time (Sri Lanka)
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            document.getElementById('time').value = formattedDate;
+        }
+
+        // Set time when page loads
+        updateTimeField();
+
+        // Also update time right before form submission
+        document.getElementById("userForm").addEventListener('submit', function (e) {
+            // Update time field with current time before submitting
+            updateTimeField();
+            // The rest of your form submission code will run after this
+        });
+    </script>
+</body>
+
+</html>
