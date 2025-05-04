@@ -1,0 +1,70 @@
+Great! You're on the right track. Let's go step-by-step to understand:
+
+---
+
+### 🔌 **Understanding ESP32 Pin Numbers**
+ESP32 pins are referred to by their **GPIO numbers**, such as `GPIO4`, `GPIO5`, etc. These numbers correspond to **D32, D22** labels you see on your **ESP32 expansion board**, but there’s a small trick:
+
+- **D1, D2, etc. are labels mostly used on NodeMCU ESP8266 boards.**
+- On **ESP32**, you should use **GPIO numbers directly** like `4`, `5`, `34`, `35`.
+
+So when your code says:
+```cpp
+#define DHTPIN 4
+```
+It means the **DHT sensor’s data pin is connected to GPIO4**, which might be labeled something like **D4** or **IO4** or **just 4** on your expansion board.
+
+You can match these using a **ESP32 pinout diagram**, but I’ll explain it directly with **a practical guide for your components**:
+
+---
+
+## ✅ **Sensor Connections and Voltage Guidelines**
+
+### 1. **DHT11 Sensor**
+- **Pins**: VCC, DATA, GND
+- **Data Pin**: Connect to **GPIO4** (`DHTPIN 4`)
+- **Power**: Use **3.3V** (⚠️ safer for ESP32)
+- **Pull-up Resistor**: 10kΩ between **DATA and VCC** (some modules have it built-in)
+
+### 2. **Soil Moisture Sensor (Analog type)**
+- **Pins**: VCC, A0 (analog output), GND
+- **Analog Output Pin**: Connect to **GPIO34** (`SOIL_MOISTURE_PIN 34`)
+- **Power**: Use **3.3V** or **5V** (⚠️ Check your module! If it has an onboard voltage regulator, 5V is okay. Otherwise, use 3.3V.)
+
+> Tip: Measure the VCC pin output with a multimeter when powered from 5V. If A0 outputs more than 3.3V, add a voltage divider or use 3.3V power instead.
+
+### 3. **LDR Module (Light Sensor)**
+- **Pins**: VCC, A0 (analog output), GND
+- **Analog Output Pin**: Connect to **GPIO35** (`LDR_PIN 35`)
+- **Power**: Use **3.3V** or **5V** (same rule as soil sensor: prefer 3.3V unless module has onboard regulator)
+
+### 4. **Relay Module (to control solenoid valve)**
+- **Pins**: VCC, IN, GND
+- **IN Pin**: Connect to **GPIO5** (`RELAY_PIN 5`)
+- **Power**: Use **5V** (⚠️ Relays typically require 5V to switch properly)
+
+> ⚠️ If you power the relay from ESP32’s 3.3V pin, it might **not switch reliably**. Use **external 5V power**, and make sure to **connect GND of ESP32 and Relay together.**
+
+---
+
+## 🔌 **Summary of Wiring Connections**
+
+| Component       | Pin on Module     | Connect to ESP32 GPIO | Power     | Notes |
+|----------------|-------------------|------------------------|-----------|-------|
+| DHT11           | Data              | GPIO4 (Digital)        | 3.3V      | Use 10k pull-up if needed |
+| Soil Sensor     | A0 (Analog)       | GPIO34 (Analog only)   | 3.3V or 5V | Prefer 3.3V if unsure |
+| LDR Module      | A0 (Analog)       | GPIO35 (Analog only)   | 3.3V or 5V | Prefer 3.3V |
+| Relay Module    | IN (Control Pin)  | GPIO5 (Digital)        | 5V        | Use external 5V power with GND common |
+| Relay Module    | VCC               | 5V                     |           | Use external power if needed |
+| Relay Module    | GND               | GND (shared with ESP32)|           |       |
+
+---
+
+### 🧠 Notes:
+- **GPIO34 and GPIO35** are **input-only pins**, perfect for analog sensors.
+- Never directly connect 5V analog outputs to ESP32 analog pins without a voltage divider.
+- Ensure **common GND** between all modules and the ESP32.
+
+---
+
+Would you like a **diagram with the pin connections**, or should I help you fix the `nan` issue with DHT reading + Firebase JSON issue next?
